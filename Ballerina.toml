@@ -1,0 +1,18 @@
+[package]
+org = "sandarusathsara"
+name = "lexhub_backend"
+version = "0.1.0"
+distribution = "2201.10.2"
+
+[build-options]
+observabilityIncluded = true
+
+[[dependency]]
+org = "ballerinax"
+name = "postgresql"
+version = "1.11.1"
+
+[[dependency]]
+org = "ballerinax"
+name = "postgresql.driver"
+version = "1.4.1"

@@ -1,0 +1,39 @@
+# Ballerina build artifacts
+target/
+Dependencies.toml
+
+# IDE files
+.vscode/
+.idea/
+*.iml
+*.iws
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Configuration files with sensitive data
+Config.toml
+*.env
+
+# Log files
+*.log
+
+# Temporary files
+*.tmp
+*.bak
+*.swp
+*~
+
+# Database files
+*.db
+*.sqlite
+
+# Coverage reports
+coverage/
+
+# Node modules (if using any JS/TS tools)
+node_modules/
+
+# Java class files
+*.class
