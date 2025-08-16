@@ -48,6 +48,3 @@ node_modules/
 
 # Java class files
 *.class
-
-
-.env.docker
