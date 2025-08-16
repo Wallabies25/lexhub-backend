@@ -5,6 +5,9 @@ import ballerina/crypto;
 import ballerina/uuid;
 import ballerina/regex;
 
+# Configurable JWT secret - set via Config.toml or environment variables
+configurable string jwtSecret = "dev_secret_key_change_for_production";
+
 # Enhanced User record type
 public type User record {|
     string id;
@@ -288,7 +291,7 @@ public function authenticateWithFirebase(string idToken) returns User|error {
 # Get default JWT configuration
 public function getDefaultJwtConfig() returns JwtConfig {
     return {
-        secret: "lexhub_secret_key_change_in_production",
+        secret: jwtSecret,
         expiry: DEFAULT_TOKEN_EXPIRY,
         issuer: DEFAULT_ISSUER,
         audience: DEFAULT_AUDIENCE
