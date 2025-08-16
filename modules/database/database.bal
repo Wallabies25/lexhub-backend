@@ -1,14 +1,5 @@
 import ballerina/log;
 
-# Database configuration type
-public type DatabaseConfig record {
-    string host;
-    int port;
-    string database;
-    string username;
-    string password;
-};
-
 # Legal statute record type
 public type LegalStatute record {
     int id;
@@ -18,12 +9,6 @@ public type LegalStatute record {
     string enacted_date;
     string last_updated;
 };
-
-# Initialize database connection (placeholder for now)
-public function initDatabase(DatabaseConfig config) returns string {
-    log:printInfo("Database connection initialized with config");
-    return "Database connection placeholder";
-}
 
 # Get all legal statutes (placeholder)
 public function getAllStatutes() returns LegalStatute[] {

@@ -1,6 +1,7 @@
 import ballerina/log;
 import ballerina/time;
 import lexhub_backend.auth;
+import lexhub_backend.database as db;
 
 # User management functions
 
@@ -18,7 +19,17 @@ public function createUser(string email, string password, string name, string ro
     }
     
     // Create user using auth module
-    return auth:registerUser(email, password, name, role);
+    auth:User newUser = check auth:registerUser(email, password, name, role);
+    
+    // Save to database
+    error? saveResult = db:saveUserToDatabase(newUser);
+    if saveResult is error {
+        log:printError("Failed to save user to database: " + saveResult.message());
+        return saveResult;
+    }
+    
+    log:printInfo("User successfully created and saved to database: " + email);
+    return newUser;
 }
 
 # Create a new lawyer account
@@ -26,7 +37,24 @@ public function createLawyer(string email, string password, string name, string 
                            string licenseNumber, string specialty) returns auth:User|error {
     log:printInfo("Creating new lawyer account for: " + email);
     
-    return auth:registerLawyer(email, password, name, phone, licenseNumber, specialty);
+    auth:User newLawyer = check auth:registerLawyer(email, password, name, phone, licenseNumber, specialty);
+    
+    // Save user to database
+    error? saveUserResult = db:saveUserToDatabase(newLawyer);
+    if saveUserResult is error {
+        log:printError("Failed to save lawyer to database: " + saveUserResult.message());
+        return saveUserResult;
+    }
+    
+    // Save lawyer profile to database
+    error? saveLawyerResult = db:saveLawyerProfileToDatabase(newLawyer);
+    if saveLawyerResult is error {
+        log:printError("Failed to save lawyer profile to database: " + saveLawyerResult.message());
+        return saveLawyerResult;
+    }
+    
+    log:printInfo("Lawyer successfully created and saved to database: " + email);
+    return newLawyer;
 }
 
 # Get user by ID (placeholder - would integrate with database)

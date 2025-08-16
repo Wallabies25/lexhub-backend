@@ -1,0 +1,54 @@
+version: '3.8'
+
+services:
+  postgres:
+    image: postgres:15-alpine
+    container_name: lexhub-postgres
+    environment:
+      POSTGRES_DB: lexhub
+      POSTGRES_USER: lexhub_user
+      POSTGRES_PASSWORD: lexhub_password
+      PGDATA: /var/lib/postgresql/data/pgdata
+    ports:
+      - "5433:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data/pgdata
+      - ./resources/migrations:/docker-entrypoint-initdb.d
+      - ./scripts/init-db.sh:/docker-entrypoint-initdb.d/init-db.sh
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U lexhub_user -d lexhub"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
+    networks:
+      - lexhub-network
+
+  # Optional: pgAdmin for database management
+  pgadmin:
+    image: dpage/pgadmin4:latest
+    container_name: lexhub-pgadmin
+    environment:
+      PGADMIN_DEFAULT_EMAIL: admin@lexhub.lk
+      PGADMIN_DEFAULT_PASSWORD: admin123
+      PGADMIN_CONFIG_SERVER_MODE: 'False'
+    ports:
+      - "5050:80"
+    volumes:
+      - pgadmin_data:/var/lib/pgadmin
+    depends_on:
+      - postgres
+    restart: unless-stopped
+    networks:
+      - lexhub-network
+
+volumes:
+  postgres_data:
+    driver: local
+  pgadmin_data:
+    driver: local
+
+networks:
+  lexhub-network:
+    driver: bridge
