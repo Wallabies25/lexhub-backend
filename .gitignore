@@ -2,6 +2,17 @@
 target/
 Dependencies.toml
 
+# Configuration files with secrets
+Config.toml
+.env
+.env.local
+.env.production
+
+# Docker volumes and data
+docker-data/
+postgres-data/
+pgadmin-data/
+
 # IDE files
 .vscode/
 .idea/
