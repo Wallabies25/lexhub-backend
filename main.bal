@@ -4,14 +4,28 @@ import ballerina/time;
 import lexhub_backend.database;
 import lexhub_backend.auth;
 import lexhub_backend.user;
+import lexhub_backend.security;
 
 # Configuration for the HTTP listener
 configurable int port = 8080;
 
-# HTTP service for LexHub Backend
+# CORS configuration for frontend integration
+http:CorsConfig corsConfig = {
+    allowOrigins: ["http://localhost:3000", "http://localhost:5173", "https://lexhub-frontend.vercel.app"],
+    allowCredentials: true,
+    allowHeaders: ["Content-Type", "Authorization"],
+    allowMethods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+    maxAge: 84900
+};
+
+# HTTP service for LexHub Backend with CORS
+@http:ServiceConfig {
+    cors: corsConfig
+}
 service /api on new http:Listener(port) {
     
     # Health check endpoint
+    # + return - JSON response with service health status
     resource function get health() returns json {
         log:printInfo("Health check endpoint accessed");
         return {
@@ -23,8 +37,13 @@ service /api on new http:Listener(port) {
     }
     
     # User registration endpoint
-    resource function post auth/register(@http:Payload json registerRequest) returns json|http:BadRequest {
+    # + registerRequest - User registration data including email, password, name, and role
+    # + return - JSON response with user data and token, or error response
+    resource function post auth/register(@http:Payload json registerRequest) returns json|http:BadRequest|http:InternalServerError {
         log:printInfo("User registration endpoint accessed");
+        
+        // Add security headers
+        map<string> securityHeaders = security:getSecurityHeaders();
         
         // Extract registration data
         json|error emailResult = registerRequest.email;
@@ -34,9 +53,11 @@ service /api on new http:Listener(port) {
         
         if emailResult is error || passwordResult is error || nameResult is error || roleResult is error {
             http:BadRequest badRequest = {
+                headers: securityHeaders,
                 body: {
                     "error": "Invalid request format",
-                    "message": "Email, password, name, and role are required"
+                    "message": "Email, password, name, and role are required",
+                    "code": "VALIDATION_ERROR"
                 }
             };
             return badRequest;
@@ -47,14 +68,31 @@ service /api on new http:Listener(port) {
         string name = nameResult.toString();
         string role = roleResult.toString();
         
+        // Security validation
+        if security:containsSqlInjection(email) || security:containsXss(email) ||
+           security:containsSqlInjection(name) || security:containsXss(name) {
+            http:BadRequest badRequest = {
+                headers: securityHeaders,
+                body: {
+                    "error": "Invalid input detected",
+                    "message": "Please provide valid input data",
+                    "code": "SECURITY_ERROR"
+                }
+            };
+            return badRequest;
+        }
+        
         // Create user
         auth:User|error newUser = user:createUser(email, password, name, role);
         
         if newUser is error {
+            log:printError("User registration failed: " + newUser.message());
             http:BadRequest badRequest = {
+                headers: securityHeaders,
                 body: {
                     "error": "Registration failed",
-                    "message": newUser.message()
+                    "message": newUser.message(),
+                    "code": "REGISTRATION_ERROR"
                 }
             };
             return badRequest;
@@ -65,20 +103,26 @@ service /api on new http:Listener(port) {
         string|error token = auth:generateToken(newUser, jwtConfig);
         
         if token is error {
-            http:BadRequest badRequest = {
+            log:printError("Token generation failed: " + token.message());
+            http:InternalServerError serverError = {
+                headers: securityHeaders,
                 body: {
                     "error": "Token generation failed",
-                    "message": token.message()
+                    "message": "Unable to generate authentication token",
+                    "code": "TOKEN_ERROR"
                 }
             };
-            return badRequest;
+            return serverError;
         }
         
-        return auth:createAuthResponse(newUser, token);
+        json response = auth:createAuthResponse(newUser, token);
+        return response;
     }
     
     # Lawyer registration endpoint
-    resource function post auth/register/lawyer(@http:Payload json registerRequest) returns json|http:BadRequest {
+    # + registerRequest - Lawyer registration data
+    # + return - JSON response with lawyer data and token, or error response
+    resource function post auth/register/lawyer(@http:Payload json registerRequest) returns json|http:BadRequest|http:InternalServerError {
         log:printInfo("Lawyer registration endpoint accessed");
         
         // Extract lawyer registration data
@@ -138,6 +182,8 @@ service /api on new http:Listener(port) {
     }
     
     # Legal statutes endpoint
+    # + search - Optional search parameter for filtering statutes
+    # + return - JSON response with statutes data
     resource function get statutes(string? search) returns json {
         log:printInfo("Statutes endpoint accessed");
         
@@ -156,7 +202,9 @@ service /api on new http:Listener(port) {
         };
     }
     
-    # Enhanced login endpoint with email/password support
+    # Enhanced login endpoint with email/password support  
+    # + loginRequest - Login credentials (email/password or Firebase token)
+    # + return - JSON response with user data and token, or error response
     resource function post auth/login(@http:Payload json loginRequest) returns json|http:BadRequest {
         log:printInfo("Login endpoint accessed");
         
@@ -245,6 +293,8 @@ service /api on new http:Listener(port) {
     }
     
     # User profile endpoint
+    # + req - HTTP request containing authorization header
+    # + return - JSON response with user profile data, or error response  
     resource function get auth/profile(http:Request req) returns json|http:Unauthorized|http:BadRequest {
         log:printInfo("Profile endpoint accessed");
         
@@ -294,6 +344,8 @@ service /api on new http:Listener(port) {
     }
     
     # IP law queries endpoint
+    # + query - Query data for IP law questions
+    # + return - JSON response with query results
     resource function post queries(@http:Payload json query) returns json {
         log:printInfo("Queries endpoint accessed");
         return {
