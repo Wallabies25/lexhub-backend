@@ -85,3 +85,30 @@ public function getAllUsers() returns json|sql:Error {
     check dbClient.close();
     return users;
 }
+
+# Get user by email for authentication
+public function getUserByEmail(string email) returns record {|string id; string email; string password_hash; string name; string role; string? phone; boolean verified; string created_at; string updated_at;|}|sql:Error? {
+    postgresql:Client dbClient = check createConnection();
+    
+    sql:ParameterizedQuery query = `SELECT id, email, password_hash, name, role, phone, verified, created_at, updated_at FROM users WHERE email = ${email}`;
+    record {|string id; string email; string password_hash; string name; string role; string? phone; boolean verified; string created_at; string updated_at;|}|sql:Error? result = dbClient->queryRow(query);
+    
+    check dbClient.close();
+    return result;
+}
+
+# Check if user exists by email
+public function userExists(string email) returns boolean|sql:Error {
+    postgresql:Client dbClient = check createConnection();
+    
+    sql:ParameterizedQuery query = `SELECT COUNT(*) as count FROM users WHERE email = ${email}`;
+    record {|int count;|}|sql:Error result = dbClient->queryRow(query);
+    
+    check dbClient.close();
+    
+    if result is sql:Error {
+        return result;
+    }
+    
+    return result.count > 0;
+}

@@ -136,50 +136,46 @@ public function authenticateUser(string email, string password) returns User|err
         return error("Invalid email format");
     }
     
-    // For testing purposes, simulate password validation
     if password.length() < 6 {
         return error("Invalid credentials");
     }
     
-    // Determine user role and details based on email for testing
-    string name = "Test User";
-    string role = "public";
-    boolean verified = false;
+    // Note: Database checking will be handled by the calling function
+    // This function focuses on JWT and password validation logic only
+    return error("Database authentication must be handled externally");
+}
+
+# Authenticate user with database record - new function for database integration
+public function authenticateUserWithRecord(string email, string password, record {|string id; string email; string password_hash; string name; string role; string? phone; boolean verified; string created_at; string updated_at;|} userRecord) returns User|error {
+    log:printInfo("Authenticating user with database record: " + email);
     
-    if email.includes("lawyer") || email.includes("attorney") {
-        name = "Test Lawyer";
-        role = "lawyer";
-        verified = false; // Lawyers need manual verification
-    } else if email.includes("student") || email.includes("university") {
-        name = "Test Student";
-        role = "student";
-        verified = true;
-    } else if email.includes("admin") {
-        name = "Test Admin";
-        role = "admin";
-        verified = true;
-    } else {
-        // Extract name from email for better UX
-        string[] emailParts = regex:split(email, "@");
-        if emailParts.length() > 0 {
-            string localPart = emailParts[0];
-            name = regex:replaceAll(localPart, "[._-]", " ");
-        }
+    // Verify password against stored hash
+    boolean|error passwordValid = verifyPassword(password, userRecord.password_hash);
+    if passwordValid is error {
+        log:printError("Error verifying password: " + passwordValid.message());
+        return error("Authentication failed");
     }
     
-    // Create mock user based on email
-    User mockUser = {
-        id: uuid:createType1AsString(),
-        email: email,
-        name: name,
-        role: role,
-        verified: verified,
-        mfaEnabled: false,
-        createdAt: time:utcNow(),
-        updatedAt: time:utcNow()
+    if !passwordValid {
+        log:printWarn("Invalid password attempt for user: " + email);
+        return error("Invalid email or password");
+    }
+    
+    // Create User object from database result
+    User authenticatedUser = {
+        id: userRecord.id,
+        email: userRecord.email,
+        name: userRecord.name,
+        role: userRecord.role,
+        phone: userRecord.phone,
+        verified: userRecord.verified,
+        mfaEnabled: false, // Will be enhanced later
+        createdAt: time:utcNow(), // Parse from userRecord.created_at if needed
+        updatedAt: time:utcNow()  // Parse from userRecord.updated_at if needed
     };
     
-    return mockUser;
+    log:printInfo("User successfully authenticated: " + email);
+    return authenticatedUser;
 }
 
 # Register new user

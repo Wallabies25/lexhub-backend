@@ -1,8 +1,23 @@
 import ballerina/log;
-import lexhub_backend.auth;
+import ballerina/time;
+
+# User record type (duplicate to avoid circular imports)
+public type User record {|
+    string id;
+    string email;
+    string name;
+    string role;
+    string? phone?;
+    string? licenseNumber?;
+    string? specialty?;
+    boolean verified;
+    boolean mfaEnabled;
+    time:Utc createdAt;
+    time:Utc updatedAt;
+|};
 
 # Save user to database using connection module
-public function saveUserToDatabase(auth:User user) returns error? {
+public function saveUserToDatabase(User user) returns error? {
     log:printInfo(string `Saving user to database: ${user.email}`);
     
     // Use the connection module's insertUser function
@@ -17,7 +32,7 @@ public function saveUserToDatabase(auth:User user) returns error? {
 }
 
 # Save lawyer profile to database using connection module
-public function saveLawyerProfileToDatabase(auth:User lawyer) returns error? {
+public function saveLawyerProfileToDatabase(User lawyer) returns error? {
     if lawyer.role != "lawyer" {
         return error("User is not a lawyer");
     }

@@ -165,9 +165,30 @@ public function authenticateLogin(string email, string password) returns auth:Us
         return error("Invalid email format");
     }
     
-    // For testing purposes, skip the user existence check and directly authenticate
-    // In production, you would check the database for user existence and verify password hash
+    // Check if user exists in database
+    boolean|error userExistsResult = db:userExists(email);
+    if userExistsResult is error {
+        log:printError("Database error while checking user existence: " + userExistsResult.message());
+        return error("Authentication failed");
+    }
     
-    // Authenticate with auth module (which creates a mock user for testing)
-    return auth:authenticateUser(email, password);
+    if !userExistsResult {
+        log:printWarn("Login attempt for non-existent user: " + email);
+        return error("Invalid email or password");
+    }
+    
+    // Get user from database
+    var userResult = db:getUserByEmail(email);
+    if userResult is error {
+        log:printError("Database error while retrieving user: " + userResult.message());
+        return error("Authentication failed");
+    }
+    
+    if userResult is () {
+        log:printWarn("User not found in database: " + email);
+        return error("Invalid email or password");
+    }
+    
+    // Authenticate using the new function that takes database record
+    return auth:authenticateUserWithRecord(email, password, userResult);
 }
