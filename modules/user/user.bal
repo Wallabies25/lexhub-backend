@@ -66,6 +66,7 @@ public function getUserById(string userId) returns auth:User|error {
     return {
         id: userId,
         email: "mock@example.com",
+        passwordHash: "",
         name: "Mock User",
         role: "public",
         verified: false,
@@ -86,6 +87,7 @@ public function updateUserProfile(string userId, map<anydata> updates) returns a
     auth:User updatedUser = {
         id: currentUser.id,
         email: currentUser.email,
+        passwordHash: currentUser.passwordHash,
         name: updates["name"] is string ? <string>updates["name"] : currentUser.name,
         role: currentUser.role,
         phone: updates["phone"] is string ? <string>updates["phone"] : currentUser?.phone,
@@ -114,6 +116,7 @@ public function verifyLawyer(string userId, boolean verified) returns auth:User|
     auth:User updatedUser = {
         id: currentUser.id,
         email: currentUser.email,
+        passwordHash: currentUser.passwordHash,
         name: currentUser.name,
         role: currentUser.role,
         phone: currentUser?.phone,

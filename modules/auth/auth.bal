@@ -12,6 +12,7 @@ configurable string jwtSecret = "dev_secret_key_change_for_production";
 public type User record {|
     string id;
     string email;
+    string passwordHash;
     string name;
     string role; // "student", "lawyer", "admin", "public"
     string? phone?;
@@ -76,16 +77,17 @@ public function extractUser(jwt:Payload payload) returns User {
     anydata customClaimsData = payload["customClaims"] ?: {};
     map<anydata> customClaims = <map<anydata>>customClaimsData;
     
-    return {
-        id: customClaims["user_id"].toString(),
-        email: payload.sub ?: "",
-        name: customClaims["name"].toString(),
-        role: customClaims["role"].toString(),
-        verified: <boolean>customClaims["verified"],
-        mfaEnabled: <boolean>customClaims["mfa_enabled"],
-        createdAt: time:utcNow(),
-        updatedAt: time:utcNow()
-    };
+        return {
+            id: customClaims["user_id"].toString(),
+            email: payload.sub ?: "",
+            passwordHash: "",
+            name: customClaims["name"].toString(),
+            role: customClaims["role"].toString(),
+            verified: <boolean>customClaims["verified"],
+            mfaEnabled: <boolean>customClaims["mfa_enabled"],
+            createdAt: time:utcNow(),
+            updatedAt: time:utcNow()
+        };
 }
 
 # Hash password using SHA-256
@@ -165,14 +167,15 @@ public function authenticateUserWithRecord(string email, string password, record
     User authenticatedUser = {
         id: userRecord.id,
         email: userRecord.email,
-        name: userRecord.name,
-        role: userRecord.role,
-        phone: userRecord.phone,
-        verified: userRecord.verified,
-        mfaEnabled: false, // Will be enhanced later
-        createdAt: time:utcNow(), // Parse from userRecord.created_at if needed
-        updatedAt: time:utcNow()  // Parse from userRecord.updated_at if needed
-    };
+            passwordHash: userRecord.password_hash,
+            name: userRecord.name,
+            role: userRecord.role,
+            phone: userRecord.phone,
+            verified: userRecord.verified,
+            mfaEnabled: false, // Will be enhanced later
+            createdAt: time:utcNow(), // Parse from userRecord.created_at if needed
+            updatedAt: time:utcNow()  // Parse from userRecord.updated_at if needed
+        };
     
     log:printInfo("User successfully authenticated: " + email);
     return authenticatedUser;
@@ -180,6 +183,11 @@ public function authenticateUserWithRecord(string email, string password, record
 
 # Register new user
 public function registerUser(string email, string password, string name, string role) returns User|error {
+    string[] allowedRoles = ["user", "lawyer"];
+    string finalRole = role == "" ? "user" : role;
+    if allowedRoles.indexOf(finalRole) == -1 {
+        return error(string `Invalid role: ${role}. Allowed roles are: ${allowedRoles.toString()}`);
+    }
     log:printInfo("Registering new user: " + email);
     
     // Validate input
@@ -193,13 +201,13 @@ public function registerUser(string email, string password, string name, string 
     
     // Hash password
     string hashedPassword = check hashPassword(password);
-    
     // Create new user
     User newUser = {
         id: uuid:createType1AsString(),
         email: email,
+        passwordHash: hashedPassword,
         name: name,
-        role: role,
+        role: finalRole,
         verified: false,
         mfaEnabled: false,
         createdAt: time:utcNow(),
@@ -234,11 +242,11 @@ public function registerLawyer(string email, string password, string name, strin
     
     // Hash password
     string hashedPassword = check hashPassword(password);
-    
     // Create new lawyer user
     User newLawyer = {
         id: uuid:createType1AsString(),
         email: email,
+        passwordHash: hashedPassword,
         name: name,
         role: "lawyer",
         phone: phone,
@@ -272,13 +280,14 @@ public function authenticateWithFirebase(string idToken) returns User|error {
     User firebaseUser = {
         id: uuid:createType1AsString(),
         email: "firebase.user@example.com",
-        name: "Firebase User",
-        role: "public",
-        verified: true,
-        mfaEnabled: false,
-        createdAt: time:utcNow(),
-        updatedAt: time:utcNow()
-    };
+            passwordHash: "",
+            name: "Firebase User",
+            role: "public",
+            verified: true,
+            mfaEnabled: false,
+            createdAt: time:utcNow(),
+            updatedAt: time:utcNow()
+        };
     
     log:printInfo("Firebase authentication successful");
     return firebaseUser;

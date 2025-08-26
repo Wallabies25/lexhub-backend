@@ -5,6 +5,7 @@ import ballerina/time;
 public type User record {|
     string id;
     string email;
+    string passwordHash;
     string name;
     string role;
     string? phone?;
@@ -21,7 +22,7 @@ public function saveUserToDatabase(User user) returns error? {
     log:printInfo(string `Saving user to database: ${user.email}`);
     
     // Use the connection module's insertUser function
-    var result = insertUser(user.email, "", user.name, user.role, user?.phone);
+    var result = insertUser(user.email, user.passwordHash, user.name, user.role, user?.phone);
     if result is error {
         log:printError(string `Failed to save user ${user.email} to database`, result);
         return result;

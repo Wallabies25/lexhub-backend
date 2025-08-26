@@ -4,7 +4,7 @@ CREATE TABLE users (
     email VARCHAR(255) UNIQUE NOT NULL,
     password_hash VARCHAR(255),
     name VARCHAR(255) NOT NULL,
-    role VARCHAR(50) NOT NULL CHECK (role IN ('student', 'lawyer', 'admin', 'public')),
+    role VARCHAR(50) NOT NULL CHECK (role IN ('user', 'lawyer')),
     phone VARCHAR(20),
     verified BOOLEAN DEFAULT FALSE,
     created_at TIMESTAMP DEFAULT NOW(),
