@@ -18,6 +18,10 @@ class UserBase(BaseModel):
 
 class UserCreate(UserBase):
     password: str
+    # Lawyer specific optional fields during registration
+    phone: Optional[str] = None
+    licenseNumber: Optional[str] = None
+    specialty: Optional[str] = None
 
 class UserProfileResponse(UserBase):
     id: int

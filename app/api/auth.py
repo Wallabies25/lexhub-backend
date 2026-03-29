@@ -29,7 +29,12 @@ def register_user(user: UserCreate, db: Session = Depends(get_db)):
 
     # Initialize a lawyer profile if user is a lawyer
     if new_user.user_type == UserType.lawyer.value:
-        lawyer_profile = Lawyer(user_id=new_user.id)
+        lawyer_profile = Lawyer(
+            user_id=new_user.id,
+            phone=user.phone,
+            license_number=user.licenseNumber,
+            specialty=user.specialty
+        )
         db.add(lawyer_profile)
         db.commit()
         
