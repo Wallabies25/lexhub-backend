@@ -37,3 +37,8 @@ node_modules/
 
 # Java class files
 *.class
+
+# Python environment files
+venv/
+__pycache__/
+*.pyc

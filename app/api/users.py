@@ -1,0 +1,78 @@
+from fastapi import APIRouter, Depends, HTTPException, status
+from sqlalchemy.orm import Session
+from typing import List, Optional
+
+from ..database import get_db
+from ..models import User, Lawyer
+from ..schemas import UserProfileResponse, UserBase
+from ..core.security import get_current_user
+
+router = APIRouter(prefix="/users", tags=["users"])
+
+@router.get("/profiles", response_model=List[UserProfileResponse])
+def get_profiles(user_type: Optional[str] = "all", db: Session = Depends(get_db)):
+    if user_type == "all":
+        users = db.query(User).all()
+    else:
+        users = db.query(User).filter(User.user_type == user_type).all()
+    return users
+
+@router.get("/current", response_model=UserProfileResponse)
+def get_current_profile(current_user: User = Depends(get_current_user)):
+    return current_user
+
+@router.get("/profile/{user_id}", response_model=UserProfileResponse)
+def get_profile_by_id(user_id: int, current_user: User = Depends(get_current_user), db: Session = Depends(get_db)):
+    user = db.query(User).filter(User.id == user_id).first()
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+    return user
+
+@router.put("/profile/{user_id}")
+def update_profile(user_id: int, profile_update: dict, current_user: User = Depends(get_current_user), db: Session = Depends(get_db)):
+    if current_user.id != user_id and current_user.user_type != "admin":
+        raise HTTPException(status_code=403, detail="Not authorized to update this profile")
+    
+    user = db.query(User).filter(User.id == user_id).first()
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+    
+    if "name" in profile_update:
+        user.name = profile_update["name"]
+    if "bio" in profile_update:
+        user.bio = profile_update["bio"]
+    
+    lawyer_details = profile_update.get("lawyer_details", None)
+    if user.user_type == "lawyer" and lawyer_details:
+        lawyer = db.query(Lawyer).filter(Lawyer.user_id == user.id).first()
+        if lawyer:
+            lawyer.phone = lawyer_details.get("phone", lawyer.phone)
+            lawyer.specialty = lawyer_details.get("specialty", lawyer.specialty)
+            lawyer.license_number = lawyer_details.get("license_number", lawyer.license_number)
+            
+    db.commit()
+    return {"message": "Profile updated successfully"}
+
+@router.get("/demo/profiles")
+def get_demo_profiles():
+    # Retaining the demo data endpoint from the Ballerina source
+    return [
+        {
+            "id": 1,
+            "name": "John Doe",
+            "email": "john@example.com",
+            "user_type": "user",
+            "joined_date": "2023-01-15",
+            "profile_picture": "/images/avatars/avatar_1.jpg",
+            "bio": "Regular user interested in legal assistance"
+        },
+        {
+            "id": 2,
+            "name": "Jane Smith",
+            "email": "jane@lexhub.com",
+            "user_type": "lawyer",
+            "joined_date": "2022-11-05",
+            "profile_picture": "/images/avatars/avatar_2.jpg",
+            "bio": "Experienced corporate lawyer with 10 years of practice"
+        }
+    ]
