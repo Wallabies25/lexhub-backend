@@ -8,6 +8,8 @@ from fastapi.staticfiles import StaticFiles
 import os
 
 # Initialize database schemas
+# 11 වෙනි පේළිය මකලා මේ පේළි දෙක දාන්න
+Base.metadata.drop_all(bind=engine)
 Base.metadata.create_all(bind=engine)
 
 app = FastAPI(title="LexHub API", description="Python backend for LexHub frontend")
