@@ -18,10 +18,15 @@ if not os.path.exists(static_dir):
     os.makedirs(static_dir, exist_ok=True)
 app.mount("/static", StaticFiles(directory=static_dir), name="static")
 
-# Allow CORS for the frontend (React Vite default port is 5173)
+# Allow CORS for the frontend
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:5173", "http://localhost:3000", "http://localhost:3001", "http://localhost:3002", "http://127.0.0.1:5173", "http://127.0.0.1:3000", "http://127.0.0.1:3001", "http://127.0.0.1:3002"],
+    allow_origins=[
+        "http://localhost:5173", 
+        "http://localhost:3000", 
+        "https://lexhub-frontdemo.vercel.app", # මෙන්න මේක අනිවාර්යයෙන්ම තියෙන්න ඕනේ
+        "https://lexhub-frontdemo-nimhanrds22-2012s-projects.vercel.app" # ඔයාගේ අර දිග Vercel ලින්ක් එකත් දාන්න
+    ],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
