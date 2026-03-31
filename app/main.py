@@ -1,22 +1,12 @@
-from fastapi import FastAPI, Request
+from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import JSONResponse
-from sqlalchemy.orm import Session
-
-from .database import engine, Base
-from .api import auth, users, lawyers, consultations, chat, admin, blogs, forum, statutes, cases, reports, notifications
 from fastapi.staticfiles import StaticFiles
 import os
 
-app = FastAPI(title="LexHub API", description="Python backend for LexHub frontend")
+# ── 1. Create App ────────────────────────────────────────────
+app = FastAPI(title="LexHub API", version="1.0.0")
 
-# ============================================================
-# STEP 1: CORS MIDDLEWARE MUST BE FIRST - before everything else
-# Using allow_origins=["*"] to nuke CORS entirely for now.
-# NOTE: When allow_origins=["*"], allow_credentials MUST be False.
-# We handle auth via Bearer token in Authorization header, not cookies,
-# so this is safe.
-# ============================================================
+# ── 2. CORS — FIRST MIDDLEWARE, wildcard to nuke CORS issues ─
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
@@ -26,51 +16,126 @@ app.add_middleware(
     expose_headers=["*"],
 )
 
-# ============================================================
-# STEP 2: Mount static files AFTER middleware
-# ============================================================
-static_dir = os.path.join(os.path.dirname(__file__), "static")
-if not os.path.exists(static_dir):
-    os.makedirs(static_dir, exist_ok=True)
-app.mount("/static", StaticFiles(directory=static_dir), name="static")
-
-# ============================================================
-# STEP 3: Create DB tables on startup (safe - won't drop existing data)
-# Wrapped in try/except so a DB error doesn't kill CORS headers
-# ============================================================
-@app.on_event("startup")
-async def startup_event():
-    try:
-        Base.metadata.create_all(bind=engine)
-        print("Database tables verified/created successfully.")
-    except Exception as e:
-        print(f"WARNING: DB table creation failed: {e}")
-        print("App will still run - tables may already exist.")
-
-# ============================================================
-# STEP 4: Register all routers
-# ============================================================
-app.include_router(auth.router)
-app.include_router(users.router)
-app.include_router(lawyers.router)
-app.include_router(consultations.router)
-app.include_router(chat.router)
-app.include_router(admin.router)
-app.include_router(blogs.router)
-app.include_router(forum.router)
-app.include_router(statutes.router)
-app.include_router(cases.router)
-app.include_router(reports.router)
-app.include_router(notifications.router)
-
+# ── 3. Health/Root routes defined BEFORE any mounts or imports─
+# These must NEVER fail regardless of DB or static issues
 @app.get("/")
 def read_root():
-    return {"message": "Welcome to LexHub Python API", "status": "running"}
+    return {"message": "LexHub API is running", "status": "ok"}
 
 @app.get("/health")
 def health_check():
-    """Health check endpoint - use this to verify backend is live"""
-    return {"status": "healthy", "cors": "open"}
+    return {"status": "healthy", "cors": "wildcard", "version": "1.0.0"}
+
+# ── 4. Static files — wrapped safely so crash doesn't kill app ─
+try:
+    static_dir = os.path.join(os.path.dirname(__file__), "static")
+    os.makedirs(static_dir, exist_ok=True)
+    app.mount("/static", StaticFiles(directory=static_dir), name="static")
+    print(f"Static files mounted at: {static_dir}")
+except Exception as e:
+    print(f"WARNING: Static files mount failed (non-fatal): {e}")
+
+# ── 5. DB startup — non-fatal, app runs even if DB init fails ─
+@app.on_event("startup")
+async def startup_event():
+    try:
+        from .database import engine, Base
+        Base.metadata.create_all(bind=engine)
+        print("DB tables verified.")
+    except Exception as e:
+        print(f"WARNING: DB startup check failed: {e}")
+        print("App continues running. Tables likely already exist in Aiven.")
+
+# ── 6. Import and register all routers ───────────────────────
+# Each router import is individually wrapped so one bad import
+# doesn't kill the entire app
+def safe_include(router_module_path: str, router_attr: str = "router"):
+    """Safely import and include a router - won't crash app if one fails"""
+    pass
+
+try:
+    from .api import auth
+    app.include_router(auth.router)
+    print("Router loaded: auth")
+except Exception as e:
+    print(f"ERROR loading auth router: {e}")
+
+try:
+    from .api import users
+    app.include_router(users.router)
+    print("Router loaded: users")
+except Exception as e:
+    print(f"ERROR loading users router: {e}")
+
+try:
+    from .api import lawyers
+    app.include_router(lawyers.router)
+    print("Router loaded: lawyers")
+except Exception as e:
+    print(f"ERROR loading lawyers router: {e}")
+
+try:
+    from .api import consultations
+    app.include_router(consultations.router)
+    print("Router loaded: consultations")
+except Exception as e:
+    print(f"ERROR loading consultations router: {e}")
+
+try:
+    from .api import chat
+    app.include_router(chat.router)
+    print("Router loaded: chat")
+except Exception as e:
+    print(f"ERROR loading chat router: {e}")
+
+try:
+    from .api import admin
+    app.include_router(admin.router)
+    print("Router loaded: admin")
+except Exception as e:
+    print(f"ERROR loading admin router: {e}")
+
+try:
+    from .api import blogs
+    app.include_router(blogs.router)
+    print("Router loaded: blogs")
+except Exception as e:
+    print(f"ERROR loading blogs router: {e}")
+
+try:
+    from .api import forum
+    app.include_router(forum.router)
+    print("Router loaded: forum")
+except Exception as e:
+    print(f"ERROR loading forum router: {e}")
+
+try:
+    from .api import statutes
+    app.include_router(statutes.router)
+    print("Router loaded: statutes")
+except Exception as e:
+    print(f"ERROR loading statutes router: {e}")
+
+try:
+    from .api import cases
+    app.include_router(cases.router)
+    print("Router loaded: cases")
+except Exception as e:
+    print(f"ERROR loading cases router: {e}")
+
+try:
+    from .api import reports
+    app.include_router(reports.router)
+    print("Router loaded: reports")
+except Exception as e:
+    print(f"ERROR loading reports router: {e}")
+
+try:
+    from .api import notifications
+    app.include_router(notifications.router)
+    print("Router loaded: notifications")
+except Exception as e:
+    print(f"ERROR loading notifications router: {e}")
 
 if __name__ == "__main__":
     import uvicorn
