@@ -22,10 +22,12 @@ app.mount("/static", StaticFiles(directory=static_dir), name="static")
 app.add_middleware(
     CORSMiddleware,
     allow_origins=[
-        "http://localhost:5173", 
-        "http://localhost:3000", 
-        "https://lexhub-frontdemo.vercel.app", # මෙන්න මේක අනිවාර්යයෙන්ම තියෙන්න ඕනේ
-        "https://lexhub-frontdemo-nimhanrds22-2012s-projects.vercel.app" # ඔයාගේ අර දිග Vercel ලින්ක් එකත් දාන්න
+        "http://localhost:5173",
+        "http://localhost:3000",
+        "https://lexhub-frontdemo.vercel.app",
+        "https://lexhub-frontdemo-nimhanrds22-2012s-projects.vercel.app",
+        "https://lexhub-frontdemo-git-main-nimhanrds22-2012s-projects.vercel.app",
+        "https://lexhub-frontdemo-git-sinethn-nimhanrds22-2012s-projects.vercel.app",
     ],
     allow_credentials=True,
     allow_methods=["*"],
