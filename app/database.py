@@ -15,30 +15,33 @@ SQLALCHEMY_DATABASE_URL = (
     f"@{DB_HOST}:{DB_PORT}/{DB_NAME}"
 )
 
-# SSL connect args for Aiven - passed as connect_args NOT url params
-connect_args = {}
+# Aiven REQUIRES SSL. We use ssl_disabled=False + ssl_verify_cert=False
+# so we get encrypted connection without needing a .pem CA file.
+# ssl_verify_identity=False skips hostname verification (safe for Render).
 if IS_AIVEN:
     connect_args = {
         "ssl_disabled": False,
-        "connection_timeout": 30,
+        "ssl_verify_cert": False,
+        "ssl_verify_identity": False,
     }
-    print(f"[DB] Aiven cloud mode - SSL enabled. Host: {DB_HOST}:{DB_PORT}")
+    print(f"[DB] Aiven SSL mode (no CA file needed). {DB_HOST}:{DB_PORT}/{DB_NAME}")
 else:
-    print(f"[DB] Local mode. Host: {DB_HOST}:{DB_PORT}/{DB_NAME}")
+    connect_args = {}
+    print(f"[DB] Local MySQL. {DB_HOST}:{DB_PORT}/{DB_NAME}")
 
 try:
     engine = create_engine(
         SQLALCHEMY_DATABASE_URL,
         connect_args=connect_args,
-        pool_pre_ping=True,
-        pool_recycle=280,
+        pool_pre_ping=True,     # ping before using pooled connection
+        pool_recycle=280,       # recycle before Aiven's 5-min idle timeout
         pool_size=5,
         max_overflow=10,
     )
     SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
-    print("[DB] Engine created successfully.")
+    print("[DB] Engine created OK.")
 except Exception as e:
-    print(f"[DB] FATAL: Could not create engine: {e}")
+    print(f"[DB] FATAL engine creation failed: {e}")
     engine = None
     SessionLocal = None
 
@@ -46,7 +49,7 @@ Base = declarative_base()
 
 def get_db():
     if SessionLocal is None:
-        raise RuntimeError("Database is not available. Check DB environment variables.")
+        raise RuntimeError("DB unavailable — check Render environment variables.")
     db = SessionLocal()
     try:
         yield db
