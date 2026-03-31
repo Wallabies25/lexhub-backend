@@ -2,39 +2,43 @@ import os
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker, declarative_base
 
-DB_USER = os.getenv("DB_USER", "root")
+DB_USER     = os.getenv("DB_USER",     "root")
 DB_PASSWORD = os.getenv("DB_PASSWORD", "root")
-DB_HOST = os.getenv("DB_HOST", "localhost")
-DB_PORT = os.getenv("DB_PORT", "3306")
-DB_NAME = os.getenv("DB_NAME", "lexhub")
+DB_HOST     = os.getenv("DB_HOST",     "localhost")
+DB_PORT     = os.getenv("DB_PORT",     "3306")
+DB_NAME     = os.getenv("DB_NAME",     "lexhub")
 
-# Detect if we're connecting to Aiven (cloud) or local MySQL
-IS_CLOUD_DB = "aivencloud.com" in DB_HOST or os.getenv("DB_SSL", "false").lower() == "true"
+IS_AIVEN = "aivencloud.com" in DB_HOST
 
-if IS_CLOUD_DB:
-    # Aiven requires SSL - use ssl_disabled=False
-    SQLALCHEMY_DATABASE_URL = (
-        f"mysql+mysqlconnector://{DB_USER}:{DB_PASSWORD}@{DB_HOST}:{DB_PORT}/{DB_NAME}"
-        f"?ssl_disabled=False"
-    )
-    print(f"Connecting to CLOUD database (SSL enabled): {DB_HOST}:{DB_PORT}/{DB_NAME}")
+SQLALCHEMY_DATABASE_URL = (
+    f"mysql+mysqlconnector://{DB_USER}:{DB_PASSWORD}"
+    f"@{DB_HOST}:{DB_PORT}/{DB_NAME}"
+)
+
+# SSL connect args for Aiven - passed as connect_args NOT url params
+connect_args = {}
+if IS_AIVEN:
+    connect_args = {
+        "ssl_disabled": False,
+        "connection_timeout": 30,
+    }
+    print(f"[DB] Aiven cloud mode - SSL enabled. Host: {DB_HOST}:{DB_PORT}")
 else:
-    SQLALCHEMY_DATABASE_URL = (
-        f"mysql+mysqlconnector://{DB_USER}:{DB_PASSWORD}@{DB_HOST}:{DB_PORT}/{DB_NAME}"
-    )
-    print(f"Connecting to LOCAL database: {DB_HOST}:{DB_PORT}/{DB_NAME}")
+    print(f"[DB] Local mode. Host: {DB_HOST}:{DB_PORT}/{DB_NAME}")
 
 try:
     engine = create_engine(
         SQLALCHEMY_DATABASE_URL,
-        pool_pre_ping=True,        # Test connection before using from pool
-        pool_recycle=300,          # Recycle connections every 5 min (avoids timeout)
-        connect_args={"connection_timeout": 30}
+        connect_args=connect_args,
+        pool_pre_ping=True,
+        pool_recycle=280,
+        pool_size=5,
+        max_overflow=10,
     )
     SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
-    print("Database engine created successfully.")
+    print("[DB] Engine created successfully.")
 except Exception as e:
-    print(f"Error creating database engine: {e}")
+    print(f"[DB] FATAL: Could not create engine: {e}")
     engine = None
     SessionLocal = None
 
@@ -42,7 +46,7 @@ Base = declarative_base()
 
 def get_db():
     if SessionLocal is None:
-        raise Exception("Database not configured")
+        raise RuntimeError("Database is not available. Check DB environment variables.")
     db = SessionLocal()
     try:
         yield db
