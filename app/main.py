@@ -7,9 +7,7 @@ from .api import auth, users, lawyers, consultations, chat, admin, blogs, forum,
 from fastapi.staticfiles import StaticFiles
 import os
 
-# Initialize database schemas
-# 11 වෙනි පේළිය මකලා මේ පේළි දෙක දාන්න
-Base.metadata.drop_all(bind=engine)
+# Create tables if they don't exist (NEVER use drop_all in production)
 Base.metadata.create_all(bind=engine)
 
 app = FastAPI(title="LexHub API", description="Python backend for LexHub frontend")
