@@ -6,15 +6,36 @@ import os
 # ── 1. Create App ────────────────────────────────────────────
 app = FastAPI(title="LexHub API", version="1.0.0")
 
-# ── 2. CORS — FIRST MIDDLEWARE, wildcard to nuke CORS issues ─
+# ── 2. CORS — ROBUST CONFIGURATION ──────────────────────────
+# We use environment variables for allowed origins, falling back to locals
+allowed_origins_raw = os.getenv("ALLOWED_ORIGINS", "http://localhost:5173,http://localhost:3000,https://lexhub-frontdemo.vercel.app")
+origins = [o.strip() for o in allowed_origins_raw.split(",") if o.strip()]
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
-    allow_credentials=False,
+    allow_origins=origins,
+    allow_credentials=True,     # Required for Auth headers (Tokens) in many cases
     allow_methods=["*"],
     allow_headers=["*"],
     expose_headers=["*"],
 )
+
+# ── 3. Handle Errors with CORS Headers ───────────────────────
+# FastAPI sometimes strips CORS headers on 500 errors. This ensures they stay.
+from fastapi import Request
+from fastapi.responses import JSONResponse
+
+@app.exception_handler(Exception)
+async def global_exception_handler(request: Request, exc: Exception):
+    return JSONResponse(
+        status_code=500,
+        content={"detail": str(exc), "type": "InternalServerError"},
+        headers={
+            "Access-Control-Allow-Origin": request.headers.get("origin", "*"),
+            "Access-Control-Allow-Credentials": "true",
+        }
+    )
+
 
 # ── 3. Health/Root routes defined BEFORE any mounts or imports─
 # These must NEVER fail regardless of DB or static issues
